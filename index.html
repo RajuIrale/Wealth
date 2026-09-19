@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Family Wealth Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1d1b4d;--mut:#6f6c94;--bg:#f5f2ff;--mint:#12c9a0;--coral:#ff5d73;--grape:#7a4dff;--sun:#ffb703;--sky:#2f8bff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Nunito','Trebuchet MS','Segoe UI',system-ui,sans-serif;font-size:15px;line-height:1.45}
+button,input,select{font:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:18px 16px 70px}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
+.top h1{margin:0;font-size:28px;font-weight:900;letter-spacing:-.5px}
+.top p{margin:2px 0 0;color:var(--mut)}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:0;border-radius:14px;padding:10px 16px;font-weight:800;cursor:pointer;background:#e9e4ff;color:var(--grape);display:inline-block;transition:transform .12s}
+.btn:hover{transform:translateY(-1px)}
+.btn:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+.btn.go{background:var(--grape);color:#fff}
+.btn.pink{background:var(--coral);color:#fff}
+.btn.sm{padding:6px 11px;font-size:13px;border-radius:10px}
+.btn.del{background:#ffe3e7;color:#d6304a}
+.banner{background:var(--sun);color:#3b2a00;border-radius:16px;padding:12px 16px;margin-bottom:16px;font-weight:700;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.hero{background:#fff;border-radius:32px;padding:26px;display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:28px;align-items:center;box-shadow:0 12px 40px rgba(80,50,200,.12)}
+.donut{width:100%;height:auto;display:block}
+.legend{display:grid;gap:12px}
+.lg{display:grid;grid-template-columns:14px 1fr auto;gap:4px 10px;align-items:center}
+.dot{width:14px;height:14px;border-radius:50%;display:inline-block}
+.lg .bar{grid-column:2/4;height:8px;border-radius:99px;background:#efeaff;overflow:hidden}
+.lg .bar i{display:block;height:100%;border-radius:99px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:16px 0}
+.tile{border-radius:22px;padding:18px 20px;color:#fff}
+.tile small{font-weight:800;opacity:.92;font-size:14px}
+.tile b{display:block;font-size:28px;font-weight:900;margin-top:4px;letter-spacing:-.5px}
+.tile em{font-style:normal;opacity:.88;font-size:13px}
+.t1{background:var(--mint)}.t2{background:var(--coral)}.t3{background:var(--grape)}
+.sec{background:#fff;border-radius:26px;padding:22px;margin-top:16px;box-shadow:0 8px 28px rgba(80,50,200,.08)}
+.sec-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.sec-h h2{margin:0;font-size:20px;font-weight:900}
+.sec-h .tools{gap:6px}
+.mut{color:var(--mut)}
+.grp{margin-bottom:16px}
+.grp-h{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:14px;background:#f7f5ff;border-left:6px solid}
+.grp-h .r{margin-left:auto}
+.item{display:grid;grid-template-columns:1fr auto;gap:6px 12px;padding:10px 6px 10px 20px;border-bottom:1px dashed #e6e1fb;align-items:center}
+.item:last-child{border-bottom:0}
+.item .nm{font-weight:800}
+.amt{font-weight:900;font-size:16px;text-align:right}
+.acts{grid-column:1/3;display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-block;padding:1px 9px;border-radius:99px;background:#efeaff;color:var(--grape);font-size:12px;font-weight:800;margin-left:8px}
+.loan{border-radius:20px;padding:16px 18px;background:#fff4f5;margin-bottom:12px}
+.loan-h{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+.loan h3{margin:0;font-size:18px;font-weight:900}
+.loan .big{font-size:24px;font-weight:900;color:#d6304a}
+.prog{height:12px;background:#ffd9de;border-radius:99px;overflow:hidden;margin:10px 0 6px}
+.prog i{display:block;height:100%;background:linear-gradient(90deg,var(--mint),var(--sky));border-radius:99px}
+.rule{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:12px 14px;border-radius:16px;background:#f3f0ff;margin-bottom:10px}
+.rule.off{opacity:.55}
+.rule .tx{flex:1;min-width:200px;font-weight:700}
+.empty{color:var(--mut);padding:12px 4px}
+.ov{position:fixed;inset:0;background:rgba(29,27,77,.55);display:grid;place-items:center;padding:16px;z-index:10}
+.dlg{background:#fff;border-radius:26px;padding:24px;width:min(440px,100%);max-height:92vh;overflow:auto}
+.dlg h3{margin:0 0 14px;font-size:20px;font-weight:900}
+.dlg label{display:block;font-weight:800;font-size:13px;margin:12px 0 4px;color:var(--mut)}
+.dlg input,.dlg select{width:100%;padding:11px 12px;border-radius:12px;border:2px solid #e4defa;background:#fbfaff}
+.dlg input[type=color]{height:46px;padding:4px}
+.dlg .end{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+.dlg .hint{font-size:13px;color:var(--mut);margin-top:10px}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:14px;font-weight:700;z-index:20;max-width:92vw}
+.cats{display:flex;flex-wrap:wrap;gap:10px}
+.cat{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 14px;border-radius:99px;color:#fff;font-weight:800}
+.cat button{border:0;background:rgba(255,255,255,.28);color:#fff;border-radius:99px;width:28px;height:28px;cursor:pointer;font-weight:900}
+.log div{padding:7px 0;border-bottom:1px dashed #e6e1fb}
+.foot{text-align:center;color:var(--mut);margin-top:26px;font-size:13px}
+.foot a{color:var(--grape);cursor:pointer;font-weight:700}
+@media(min-width:640px){.item{grid-template-columns:1fr auto auto}.acts{grid-column:auto}}
+@media(max-width:700px){.hero{grid-template-columns:1fr;padding:18px}.top h1{font-size:24px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<!-- YOUR DATA LIVES HERE. The "Save file for GitHub" button rewrites this block. -->
+<script id="seed" type="application/json">{
+ "editedAt": 0,
+ "categories": [
+  {"id":"c1","name":"EPF","color":"#7a4dff"},
+  {"id":"c2","name":"Stocks","color":"#12c9a0"},
+  {"id":"c3","name":"Savings Account","color":"#ffb703"},
+  {"id":"c4","name":"Mutual Funds","color":"#ff5d73"},
+  {"id":"c5","name":"Fixed Deposit","color":"#2f8bff"},
+  {"id":"c6","name":"Gold","color":"#fb8500"},
+  {"id":"c7","name":"PPF / NPS","color":"#f15bb5"}
+ ],
+ "assets": [],
+ "loans": [
+  {"id":"l1","name":"Loan","original":0,"outstanding":0}
+ ],
+ "rules": [
+  {"id":"r1","kind":"loan","targetId":"l1","amount":37090,"day":2,"active":true,"lastApplied":"2026-09"}
+ ],
+ "log": []
+}</script>
+
+<script>
+const $=s=>document.querySelector(s);
+const uid=()=>Math.random().toString(36).slice(2,9);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>'₹'+Math.round(Number(n)||0).toLocaleString('en-IN');
+const short=n=>{n=Number(n)||0;const a=Math.abs(n);return a>=1e7?'₹'+(n/1e7).toFixed(2)+' Cr':a>=1e5?'₹'+(n/1e5).toFixed(2)+' L':fmt(n)};
+const ord=n=>n+(['th','st','nd','rd'][(n%100>10&&n%100<14)?0:(n%10<4?n%10:0)]);
+const ym=(y,m)=>y+'-'+String(m+1).padStart(2,'0');
+const KEY='family-wealth-tracker-v1';
+const PALETTE=['#7a4dff','#12c9a0','#ffb703','#ff5d73','#2f8bff','#f15bb5','#00bbf9','#fb8500','#9b5de5','#06d6a0'];
+const EMBEDDED=JSON.parse(document.getElementById('seed').textContent);
+let S;
+
+/* ---------- state ---------- */
+function load(){
+  S=JSON.parse(JSON.stringify(EMBEDDED));
+  try{
+    const l=JSON.parse(localStorage.getItem(KEY)||'null');
+    if(l&&Array.isArray(l.assets)&&(l.editedAt||0)>(EMBEDDED.editedAt||0))S=l;
+  }catch(e){}
+  ['categories','assets','loans','rules','log'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[]});
+}
+const persistQuiet=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+function save(){S.editedAt=Date.now();persistQuiet();render()}
+function addLog(text,d){
+  d=d||new Date();
+  S.log.unshift({on:d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),text});
+  S.log=S.log.slice(0,60);
+}
+
+/* ---------- monthly rules ---------- */
+function latestDue(day){
+  const n=new Date();let y=n.getFullYear(),m=n.getMonth();
+  const d=new Date(y,m,Math.min(day,new Date(y,m+1,0).getDate()));
+  if(d>n){m--;if(m<0){m=11;y--}}
+  return ym(y,m);
+}
+function applyRules(){
+  const now=new Date();
+  S.rules.forEach(r=>{
+    if(!r.active)return;
+    let [y,m]=r.lastApplied.split('-').map(Number);m--;
+    for(let i=0;i<600;i++){
+      m++;if(m>11){m=0;y++}
+      const due=new Date(y,m,Math.min(r.day,new Date(y,m+1,0).getDate()));
+      if(due>now)break;
+      const t=r.kind==='loan'?S.loans.find(x=>x.id===r.targetId):S.assets.find(x=>x.id===r.targetId);
+      if(t){
+        if(r.kind==='loan'){
+          const p=Math.min(+r.amount,+t.outstanding);
+          if(p>0){t.outstanding=+t.outstanding-p;addLog(t.name+': loan reduced by '+fmt(p),due)}
+        }else{
+          t.amount=+t.amount+ +r.amount;addLog(t.name+': increased by '+fmt(r.amount),due);
+        }
+      }
+      r.lastApplied=ym(y,m);
+    }
+  });
+}
+
+/* ---------- helpers ---------- */
+const totAssets=()=>S.assets.reduce((a,x)=>a+ +x.amount,0);
+const totLoans=()=>S.loans.reduce((a,x)=>a+ +x.outstanding,0);
+const catOf=id=>S.categories.find(c=>c.id===id)||{name:'?',color:'#999'};
+let toastT;
+function toast(msg){
+  $('#toast').innerHTML='<div class="toast">'+esc(msg)+'</div>';
+  clearTimeout(toastT);toastT=setTimeout(()=>{$('#toast').innerHTML=''},4500);
+}
+function field(label,name,val,type,extra){
+  return '<label>'+label+'</label><input name="'+name+'" type="'+(type||'text')+'" value="'+esc(val)+'" '+(extra||'')+'>';
+}
+function select(label,name,opts,val){
+  return '<label>'+label+'</label><select name="'+name+'">'+opts.map(o=>'<option value="'+esc(o[0])+'"'+(o[0]===val?' selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select>';
+}
+function modal(title,body,onOk,okLabel){
+  window._ok=onOk;
+  $('#modal').innerHTML='<div class="ov" onclick="if(event.target===this)closeModal()"><form class="dlg" onsubmit="event.preventDefault();_ok(new FormData(this))"><h3>'+title+'</h3>'+body+'<div class="end"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button class="btn go">'+(okLabel||'Save')+'</button></div></form></div>';
+  const f=$('#modal input,#modal select');if(f)f.focus();
+}
+function closeModal(){$('#modal').innerHTML=''}
+function download(name,text,type){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+}
+
+/* ---------- assets ---------- */
+function assetForm(id){
+  if(!S.categories.length)return toast('Create an investment type first.');
+  const a=id?S.assets.find(x=>x.id===id):{catId:S.categories[0].id,name:'',amount:'',owner:'Joint'};
+  modal(id?'Edit asset':'Add asset',
+    select('Investment type','catId',S.categories.map(c=>[c.id,c.name]),a.catId)+
+    field('Name (for example HDFC Savings)','name',a.name)+
+    field('Current amount (₹)','amount',a.amount,'number','min="0" step="any" required')+
+    select('Owner','owner',['Joint','Raju','Wife'].map(o=>[o,o]),a.owner||'Joint'),
+    fd=>{
+      const name=(fd.get('name')||'').trim();
+      if(!name)return toast('Give the asset a name.');
+      const v={catId:fd.get('catId'),name,amount:+fd.get('amount')||0,owner:fd.get('owner')};
+      if(id)Object.assign(a,v);else S.assets.push({id:uid(),...v});
+      closeModal();save();
+    });
+}
+function quickAdd(id){
+  const a=S.assets.find(x=>x.id===id);
+  modal('Add or withdraw: '+esc(a.name),
+    field('Amount (₹). Use a minus sign to withdraw','delta','','number','step="any" required')+
+    '<div class="hint">Current balance '+fmt(a.amount)+'</div>',
+    fd=>{
+      const d=+fd.get('delta');if(!d)return closeModal();
+      a.amount=Math.max(0,+a.amount+d);
+      addLog(a.name+': '+(d>0?'added ':'withdrew ')+fmt(Math.abs(d)));
+      closeModal();save();
+    },'Update balance');
+}
+function delAsset(id){
+  const a=S.assets.find(x=>x.id===id);
+  if(!confirm('Delete "'+a.name+'"? Its auto-increase rules will be removed too.'))return;
+  S.assets=S.assets.filter(x=>x.id!==id);
+  S.rules=S.rules.filter(r=>!(r.kind==='asset'&&r.targetId===id));
+  save();
+}
+
+/* ---------- categories ---------- */
+function catForm(id){
+  const c=id?S.categories.find(x=>x.id===id):{name:'',color:PALETTE[S.categories.length%PALETTE.length]};
+  modal(id?'Edit investment type':'New investment type',
+    field('Name (for example EPF, Stocks, Chit fund)','name',c.name)+
+    field('Colour','color',c.color,'color'),
+    fd=>{
+      const name=(fd.get('name')||'').trim();
+      if(!name)return toast('Give the type a name.');
+      if(id){c.name=name;c.color=fd.get('color')}
+      else S.categories.push({id:uid(),name,color:fd.get('color')});
+      closeModal();save();
+    });
+}
+function delCat(id){
+  if(S.assets.some(a=>a.catId===id))return toast('Move or delete the assets in this type first.');
+  if(!confirm('Delete this investment type?'))return;
+  S.categories=S.categories.filter(c=>c.id!==id);save();
+}
+
+/* ---------- loans ---------- */
+function loanForm(id){
+  const l=id?S.loans.find(x=>x.id===id):{name:'',original:'',outstanding:''};
+  modal(id?'Edit loan':'Add loan',
+    field('Loan name (for example Home loan)','name',l.name)+
+    field('Outstanding now (₹)','outstanding',l.outstanding,'number','min="0" step="any" required')+
+    field('Original loan amount (₹, optional, for the progress bar)','original',l.original,'number','min="0" step="any"'),
+    fd=>{
+      const name=(fd.get('name')||'').trim();
+      if(!name)return toast('Give the loan a name.');
+      const v={name,outstanding:+fd.get('outstanding')||0,original:+fd.get('original')||0};
+      if(id)Object.assign(l,v);else S.loans.push({id:uid(),...v});
+      closeModal();save();
+    });
+}
+function delLoan(id){
+  const l=S.loans.find(x=>x.id===id);
+  if(!confirm('Delete "'+l.name+'"? Its auto-reduce rules will be removed too.'))return;
+  S.loans=S.loans.filter(x=>x.id!==id);
+  S.rules=S.rules.filter(r=>!(r.kind==='loan'&&r.targetId===id));
+  save();
+}
+function loanCard(l){
+  const rs=S.rules.filter(r=>r.kind==='loan'&&r.targetId===l.id&&r.active);
+  const out=+l.outstanding,orig=+l.original;
+  const pct=orig>0?Math.min(100,Math.max(0,(1-out/orig)*100)):null;
+  let info='';
+  if(out<=0){info='Fully paid.'}
+  else if(rs.length){
+    const monthly=rs.reduce((s,x)=>s+ +x.amount,0),n=Math.ceil(out/monthly);
+    let [y,m]=rs[0].lastApplied.split('-').map(Number);
+    const t=(m-1)+n;y+=Math.floor(t/12);
+    const when=new Date(y,t%12,1).toLocaleDateString('en-IN',{month:'short',year:'numeric'});
+    info='Reduces by '+fmt(monthly)+' every month. About '+n+' months left, debt-free around '+when+'.';
+  }else info='No monthly reduction set yet.';
+  return '<div class="loan"><div class="loan-h"><h3>'+esc(l.name)+'</h3><span class="big">'+fmt(out)+'</span></div>'+
+    (pct!==null?'<div class="prog"><i style="width:'+pct+'%"></i></div><div class="mut">'+pct.toFixed(1)+'% repaid of '+fmt(orig)+'</div>':'')+
+    '<div class="mut" style="margin-top:6px">'+info+'</div>'+
+    '<div class="acts" style="margin-top:10px"><button class="btn sm" onclick="loanForm(\''+l.id+'\')">Edit</button><button class="btn sm del" onclick="delLoan(\''+l.id+'\')">Delete</button></div></div>';
+}
+
+/* ---------- rules ---------- */
+function ruleForm(kind,id){
+  const list=kind==='loan'?S.loans:S.assets;
+  if(!list.length)return toast(kind==='loan'?'Add a loan first.':'Add an asset first.');
+  const r=id?S.rules.find(x=>x.id===id):{targetId:list[0].id,amount:'',day:2};
+  const oldDay=r.day;
+  modal(kind==='loan'?'Monthly loan reduction':'Monthly asset increase',
+    select(kind==='loan'?'Loan':'Asset','targetId',list.map(x=>[x.id,x.name]),r.targetId)+
+    field(kind==='loan'?'Reduce by (₹ each month)':'Increase by (₹ each month)','amount',r.amount,'number','min="1" step="any" required')+
+    field('Day of month (1 to 31)','day',r.day,'number','min="1" max="31" required')+
+    '<div class="hint">Applied on this day every month (last day in shorter months). If nobody opens the page on that day, it catches up on the next visit.</div>',
+    fd=>{
+      const day=Math.min(31,Math.max(1,parseInt(fd.get('day'),10)||1)),amount=+fd.get('amount');
+      if(!(amount>0))return toast('Enter an amount above 0.');
+      if(id){
+        Object.assign(r,{targetId:fd.get('targetId'),amount,day});
+        if(day!==oldDay)r.lastApplied=latestDue(day);
+      }else S.rules.push({id:uid(),kind,targetId:fd.get('targetId'),amount,day,active:true,lastApplied:latestDue(day)});
+      closeModal();save();
+    });
+}
+function toggleRule(id){
+  const r=S.rules.find(x=>x.id===id);r.active=!r.active;
+  if(r.active)r.lastApplied=latestDue(r.day);
+  save();
+}
+function delRule(id){
+  if(!confirm('Delete this monthly rule?'))return;
+  S.rules=S.rules.filter(r=>r.id!==id);save();
+}
+function ruleRow(r){
+  const t=(r.kind==='loan'?S.loans:S.assets).find(x=>x.id===r.targetId);
+  const txt=r.kind==='loan'
+    ?esc(t?t.name:'(deleted loan)')+' goes down by '+fmt(r.amount)+' on the '+ord(r.day)+' of every month'
+    :esc(t?t.name:'(deleted asset)')+' goes up by '+fmt(r.amount)+' on the '+ord(r.day)+' of every month';
+  return '<div class="rule'+(r.active?'':' off')+'"><span class="dot" style="background:'+(r.kind==='loan'?'var(--coral)':'var(--mint)')+'"></span><span class="tx">'+txt+'</span>'+
+    '<button class="btn sm" onclick="toggleRule(\''+r.id+'\')">'+(r.active?'Pause':'Resume')+'</button>'+
+    '<button class="btn sm" onclick="ruleForm(\''+r.kind+'\',\''+r.id+'\')">Edit</button>'+
+    '<button class="btn sm del" onclick="delRule(\''+r.id+'\')">Delete</button></div>';
+}
+
+/* ---------- save / share ---------- */
+function publish(){
+  const clone=document.documentElement.cloneNode(true);
+  clone.querySelector('#app').innerHTML='';
+  clone.querySelector('#seed').textContent=JSON.stringify(S,null,1).replace(/</g,'\\u003c');
+  download('index.html','<!DOCTYPE html>\n'+clone.outerHTML,'text/html');
+  toast('Saved. Upload this index.html to GitHub (replace the old one) so your wife sees the update.');
+}
+function exportJSON(){download('wealth-data.json',JSON.stringify(S,null,1),'application/json')}
+function importJSON(ev){
+  const f=ev.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const o=JSON.parse(rd.result);
+      if(!Array.isArray(o.assets)||!Array.isArray(o.categories))throw 0;
+      S=o;['loans','rules','log'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[]});
+      applyRules();save();toast('Data imported.');
+    }catch(e){toast('That file is not a valid wealth-data.json.')}
+  };
+  rd.readAsText(f);ev.target.value='';
+}
+function resetLocal(){
+  if(!confirm('Throw away changes on this device and go back to the published data?'))return;
+  localStorage.removeItem(KEY);location.reload();
+}
+
+/* ---------- rendering ---------- */
+function donut(used,A){
+  const R=70,C=2*Math.PI*R;let off=0,segs='';
+  if(!A)segs='<circle cx="100" cy="100" r="'+R+'" fill="none" stroke="#ece8ff" stroke-width="26"/>';
+  used.forEach(c=>{
+    const len=c.sum/A*C;
+    segs+='<circle cx="100" cy="100" r="'+R+'" fill="none" stroke="'+c.color+'" stroke-width="26" stroke-dasharray="'+Math.max(len-2,0.5)+' '+C+'" stroke-dashoffset="'+(-off)+'" transform="rotate(-90 100 100)"><title>'+esc(c.name)+': '+fmt(c.sum)+'</title></circle>';
+    off+=len;
+  });
+  return '<svg viewBox="0 0 200 200" class="donut" role="img" aria-label="Asset allocation">'+segs+
+    '<text x="100" y="94" text-anchor="middle" font-size="11" font-weight="700" fill="#6f6c94">Total assets</text>'+
+    '<text x="100" y="118" text-anchor="middle" font-size="21" font-weight="900" fill="#1d1b4d">'+short(A)+'</text></svg>';
+}
+function render(){
+  const A=totAssets(),L=totLoans(),NW=A-L;
+  const dirty=(S.editedAt||0)>(EMBEDDED.editedAt||0);
+  const cats=S.categories.map(c=>{
+    const items=S.assets.filter(a=>a.catId===c.id);
+    return {...c,items,sum:items.reduce((s,a)=>s+ +a.amount,0)};
+  });
+  const used=cats.filter(c=>c.sum>0).sort((a,b)=>b.sum-a.sum);
+  const legend=used.length?used.map(c=>'<div class="lg"><span class="dot" style="background:'+c.color+'"></span><span><b>'+esc(c.name)+'</b> <span class="mut">'+(c.sum/A*100).toFixed(1)+'%</span></span><b>'+fmt(c.sum)+'</b><div class="bar"><i style="width:'+(c.sum/A*100)+'%;background:'+c.color+'"></i></div></div>').join('')
+    :'<div class="empty">Add your first asset to see how your money is split.</div><div><button class="btn go" onclick="assetForm()">Add asset</button></div>';
+  const groups=cats.filter(c=>c.items.length).map(c=>
+    '<div class="grp"><div class="grp-h" style="border-color:'+c.color+'"><span class="dot" style="background:'+c.color+'"></span><b>'+esc(c.name)+'</b><span class="mut">'+(A?(c.sum/A*100).toFixed(1):'0.0')+'%</span><b class="r">'+fmt(c.sum)+'</b></div>'+
+    c.items.map(a=>'<div class="item"><div><span class="nm">'+esc(a.name)+'</span><span class="chip">'+esc(a.owner||'Joint')+'</span></div><div class="amt">'+fmt(a.amount)+'</div><div class="acts">'+
+      '<button class="btn sm go" onclick="quickAdd(\''+a.id+'\')">Add / withdraw</button>'+
+      '<button class="btn sm" onclick="assetForm(\''+a.id+'\')">Edit</button>'+
+      '<button class="btn sm del" onclick="delAsset(\''+a.id+'\')">Delete</button></div></div>').join('')+'</div>').join('');
+  const loanRules=S.rules.filter(r=>r.kind==='loan'),assetRules=S.rules.filter(r=>r.kind==='asset');
+  $('#main').innerHTML='<div class="wrap">'+
+  '<div class="top"><div><h1>Family Wealth Tracker</h1><p>Where our money sits and what we still owe.</p></div>'+
+  '<div class="tools"><button class="btn go" onclick="assetForm()">Add asset</button><button class="btn pink" onclick="publish()">Save file for GitHub</button></div></div>'+
+  (dirty?'<div class="banner"><span>You have changes that are not on GitHub yet. Save the file and upload it so your wife sees them.</span><button class="btn sm" style="background:#fff;color:#3b2a00" onclick="publish()">Save file</button></div>':'')+
+  '<div class="hero">'+donut(used,A)+'<div class="legend">'+legend+'</div></div>'+
+  '<div class="tiles"><div class="tile t1"><small>Total assets</small><b>'+fmt(A)+'</b><em>'+S.assets.length+' entries in '+used.length+' types</em></div>'+
+  '<div class="tile t2"><small>Loans outstanding</small><b>'+fmt(L)+'</b><em>'+S.loans.length+' loan'+(S.loans.length===1?'':'s')+'</em></div>'+
+  '<div class="tile t3"><small>Net worth</small><b>'+fmt(NW)+'</b><em>Assets minus loans</em></div></div>'+
+  '<div class="sec"><div class="sec-h"><h2>Assets</h2><div class="tools"><button class="btn sm go" onclick="assetForm()">Add asset</button></div></div>'+(groups||'<div class="empty">No assets yet.</div>')+'</div>'+
+  '<div class="sec"><div class="sec-h"><h2>Loans</h2><div class="tools"><button class="btn sm go" onclick="loanForm()">Add loan</button></div></div>'+(S.loans.map(loanCard).join('')||'<div class="empty">No loans. Nice.</div>')+'</div>'+
+  '<div class="sec"><div class="sec-h"><h2>Monthly auto updates</h2><div class="tools"><button class="btn sm pink" onclick="ruleForm(\'loan\')">Reduce a loan</button><button class="btn sm go" onclick="ruleForm(\'asset\')">Increase an asset</button></div></div>'+
+  (S.rules.length?loanRules.concat(assetRules).map(ruleRow).join(''):'<div class="empty">Set a loan EMI or a mutual fund SIP and it updates itself every month.</div>')+
+  '<div class="mut" style="font-size:13px">Updates are applied when the page is opened, so a missed date is caught up automatically.</div></div>'+
+  '<div class="sec"><div class="sec-h"><h2>Investment types</h2><div class="tools"><button class="btn sm go" onclick="catForm()">New type</button></div></div><div class="cats">'+
+  S.categories.map(c=>'<span class="cat" style="background:'+c.color+'">'+esc(c.name)+'<button title="Edit" onclick="catForm(\''+c.id+'\')">✎</button><button title="Delete" onclick="delCat(\''+c.id+'\')">×</button></span>').join('')+'</div></div>'+
+  (S.log.length?'<div class="sec"><div class="sec-h"><h2>Recent activity</h2></div><div class="log">'+S.log.slice(0,15).map(e=>'<div><b>'+esc(e.on)+'</b> &nbsp;'+esc(e.text)+'</div>').join('')+'</div></div>':'')+
+  '<div class="foot"><label class="btn sm" style="cursor:pointer">Import data<input type="file" accept=".json" hidden onchange="importJSON(event)"></label> <button class="btn sm" onclick="exportJSON()">Export data</button> <button class="btn sm del" onclick="resetLocal()">Discard my local changes</button></div>'+
+  '</div>';
+}
+
+function init(){
+  $('#app').innerHTML='<div id="main"></div><div id="modal"></div><div id="toast"></div>';
+  load();applyRules();persistQuiet();render();
+}
+init();
+</script>
+</body>
+</html>
