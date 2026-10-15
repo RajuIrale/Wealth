@@ -38,11 +38,11 @@ label{font-size:13px;opacity:.85}.row{display:flex;gap:8px}.err{color:#ff8a8a;mi
 </div>
 
 <div id="modal" class="modal hide"><div class="card"><h3 id="mt" style="margin-top:0">Add</h3>
-<label>Category</label><select id="cat"></select>
+<label>Category</label><select id="cat" onchange="tg()"></select>
 <label>Name (optional, e.g. HDFC SIP)</label><input id="nm">
 <label>Amount ₹</label><input id="am" type="number" inputmode="decimal">
-<label><input type="checkbox" id="ar" style="width:auto" onchange="tg()"> Auto-add every month (SIP)</label>
-<div id="ab" class="hide"><label>Amount to add monthly ₹</label><input id="aa" type="number" inputmode="decimal"><label>On date of month (1-31)</label><input id="ad" type="number" min="1" max="31"></div>
+<label><input type="checkbox" id="ar" style="width:auto" onchange="tg()"> <span id="arl">Auto-add every month (SIP)</span></label>
+<div id="ab" class="hide"><label id="aal">Amount to add monthly ₹</label><input id="aa" type="number" inputmode="decimal"><label>On date of month (1-31)</label><input id="ad" type="number" min="1" max="31"></div>
 <div class="row" style="margin-top:10px"><button class="g" style="flex:1" onclick="save()">Save</button><button class="s" onclick="closeM()">Cancel</button></div></div></div>
 
 <script>
@@ -66,7 +66,7 @@ async function pull(){const b=getDB();if(!b)return setSt("💾 Local only");try{
 function autoApply(){const t=new Date();t.setHours(0,0,0,0);let ch=0;
  D.forEach(it=>{if(!it.auto)return;let last=pd(it.last),y=last.getFullYear(),m=last.getMonth();
   for(let i=0;i<1200;i++){const dim=new Date(y,m+1,0).getDate(),c=new Date(y,m,Math.min(it.auto.day,dim));
-   if(c>t)break;if(c>last){it.amount+=it.auto.amt;last=c;it.last=iso(c);ch=1}m++;if(m>11){m=0;y++}}});
+   if(c>t)break;if(c>last){it.amount=it.cat=="Debt"?Math.max(0,it.amount-it.auto.amt):it.amount+it.auto.amt;last=c;it.last=iso(c);ch=1}m++;if(m>11){m=0;y++}}});
  if(ch)persist()}
 function doLogin(){if(H($("u").value.trim()+":"+$("p").value)==OK){localStorage.setItem("irale_ok","1");start()}else $("err").textContent="Wrong username or password"}
 $("p").addEventListener("keydown",e=>{if(e.key=="Enter")doLogin()});
@@ -80,12 +80,12 @@ function render(){const inv=D.filter(x=>x.cat!="Debt"),ti=inv.reduce((s,x)=>s+x.
   lg+=`<div><i class="dot" style="background:${CATS[c]}"></i>${c}<span>${R(tot[c])}<br><small>${p.toFixed(1)}%</small></span></div>`});
  $("pie").style.background=g.length?`conic-gradient(${g.join(",")})`:"#ffffff22";
  $("hole").innerHTML=`<div>Total<br><b style="font-size:18px">${R(ti)}</b></div>`;$("leg").innerHTML=lg||"<p>No investments yet. Tap ＋ Add 👉</p>";
- $("list").innerHTML=D.map(x=>`<div class="item" style="border-color:${CATS[x.cat]}"><div class="m"><b>${esc(x.name||x.cat)}</b><span class="tag">${x.cat}</span><br><span style="font-size:18px">${R(x.amount)}</span>${x.auto?`<div class="auto">🔁 +${R(x.auto.amt)} on ${x.auto.day}th every month</div>`:""}</div><button class="s" onclick="openM('${x.id}')">✏️ Edit</button><button class="s" onclick="del('${x.id}')">🗑</button></div>`).join("")}
+ $("list").innerHTML=D.map(x=>`<div class="item" style="border-color:${CATS[x.cat]}"><div class="m"><b>${esc(x.name||x.cat)}</b><span class="tag">${x.cat}</span><br><span style="font-size:18px">${R(x.amount)}</span>${x.auto?`<div class="auto">${x.cat=="Debt"?"🔻 −":"🔁 +"}${R(x.auto.amt)} on ${x.auto.day}th every month</div>`:""}</div><button class="s" onclick="openM('${x.id}')">✏️ Edit</button><button class="s" onclick="del('${x.id}')">🗑</button></div>`).join("")}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function openM(id){eid=id||null;const x=D.find(i=>i.id==id)||{};$("cat").innerHTML=Object.keys(CATS).map(c=>`<option ${x.cat==c?"selected":""}>${c}</option>`).join("");
  $("mt").textContent=id?"Edit":"Add";$("nm").value=x.name||"";$("am").value=x.amount??"";$("ar").checked=!!x.auto;$("aa").value=x.auto?.amt||"";$("ad").value=x.auto?.day||"";tg();$("modal").classList.remove("hide")}
 function closeM(){$("modal").classList.add("hide")}
-function tg(){$("ab").classList.toggle("hide",!$("ar").checked)}
+function tg(){const d=$("cat").value=="Debt";$("arl").textContent=d?"Auto-reduce every month (EMI / loan payment)":"Auto-add every month (SIP)";$("aal").textContent=d?"Amount to reduce monthly ₹":"Amount to add monthly ₹";$("ab").classList.toggle("hide",!$("ar").checked)}
 function save(){const amt=parseFloat($("am").value);if(isNaN(amt)||amt<0)return alert("Enter a valid amount");
  let auto=null;if($("ar").checked){const a=parseFloat($("aa").value),d=parseInt($("ad").value);if(!(a>0)||!(d>=1&&d<=31))return alert("Enter monthly amount and a date 1-31");auto={amt:a,day:d}}
  const x=D.find(i=>i.id==eid);
