@@ -109,7 +109,7 @@ button,input,select{font:inherit}
 <script>
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,9);
-const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const fmt=n=>'₹'+Math.round(Number(n)||0).toLocaleString('en-IN');
 const short=n=>{n=Number(n)||0;const a=Math.abs(n);return a>=1e7?'₹'+(n/1e7).toFixed(2)+' Cr':a>=1e5?'₹'+(n/1e5).toFixed(2)+' L':fmt(n)};
 const ord=n=>n+(['th','st','nd','rd'][(n%100>10&&n%100<14)?0:(n%10<4?n%10:0)]);
@@ -120,15 +120,52 @@ const EMBEDDED=JSON.parse(document.getElementById('seed').textContent);
 let S;
 
 /* ---------- state ---------- */
+function normalizeState(state){
+  const safe = state && typeof state === 'object' ? state : {};
+  safe.categories = Array.isArray(safe.categories) ? safe.categories.map(c=>({
+    id: c&&c.id || uid(),
+    name: String(c&&c.name || 'Untitled'),
+    color: /^#[0-9A-Fa-f]{3,6}$/.test(c&&c.color || '') ? c.color : '#7a4dff'
+  })) : [];
+  safe.assets = Array.isArray(safe.assets) ? safe.assets.map(a=>({
+    id: a&&a.id || uid(),
+    catId: a&&a.catId || safe.categories[0]?.id || '',
+    name: String(a&&a.name || 'Asset'),
+    amount: Number(a&&a.amount) || 0,
+    owner: ['Joint','Raju','Wife'].includes(a&&a.owner) ? a.owner : 'Joint'
+  })) : [];
+  safe.loans = Array.isArray(safe.loans) ? safe.loans.map(l=>({
+    id: l&&l.id || uid(),
+    name: String(l&&l.name || 'Loan'),
+    original: Number(l&&l.original) || 0,
+    outstanding: Number(l&&l.outstanding) || 0
+  })) : [];
+  safe.rules = Array.isArray(safe.rules) ? safe.rules.filter(Boolean).map(r=>({
+    id: r&&r.id || uid(),
+    kind: r&&r.kind === 'loan' ? 'loan' : 'asset',
+    targetId: r&&r.targetId || ((r&&r.kind === 'loan') ? safe.loans[0]?.id : safe.assets[0]?.id || ''),
+    amount: Number(r&&r.amount) || 0,
+    day: Math.min(31, Math.max(1, Number(r&&r.day) || 1)),
+    active: r ? !!r.active : true,
+    lastApplied: (typeof r?.lastApplied === 'string' && /^\d{4}-\d{2}$/.test(r.lastApplied)) ? r.lastApplied : latestDue(Math.min(31, Math.max(1, Number(r&&r.day) || 1)))
+  })) : [];
+  safe.log = Array.isArray(safe.log) ? safe.log.filter(Boolean).map(entry=>({
+    on: entry&&entry.on || new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
+    text: String(entry&&entry.text || '')
+  })) : [];
+  safe.editedAt = Number(safe.editedAt) || 0;
+  return safe;
+}
 function load(){
-  S=JSON.parse(JSON.stringify(EMBEDDED));
+  S=normalizeState(JSON.parse(JSON.stringify(EMBEDDED)));
   try{
     const l=JSON.parse(localStorage.getItem(KEY)||'null');
-    if(l&&Array.isArray(l.assets)&&(l.editedAt||0)>(EMBEDDED.editedAt||0))S=l;
+    if(l&&Array.isArray(l.assets)&&(l.editedAt||0)>(EMBEDDED.editedAt||0))S=normalizeState(l);
   }catch(e){}
   ['categories','assets','loans','rules','log'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[]});
 }
-const persistQuiet=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const persistQuiet=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){};
+};
 function save(){S.editedAt=Date.now();persistQuiet();render()}
 function addLog(text,d){
   d=d||new Date();
@@ -146,7 +183,8 @@ function latestDue(day){
 function applyRules(){
   const now=new Date();
   S.rules.forEach(r=>{
-    if(!r.active)return;
+    if(!r||!r.active)return;
+    if(!r.lastApplied || !/^\d{4}-\d{2}$/.test(r.lastApplied))r.lastApplied=latestDue(r.day);
     let [y,m]=r.lastApplied.split('-').map(Number);m--;
     for(let i=0;i<600;i++){
       m++;if(m>11){m=0;y++}
@@ -183,7 +221,7 @@ function select(label,name,opts,val){
 }
 function modal(title,body,onOk,okLabel){
   window._ok=onOk;
-  $('#modal').innerHTML='<div class="ov" onclick="if(event.target===this)closeModal()"><form class="dlg" onsubmit="event.preventDefault();_ok(new FormData(this))"><h3>'+title+'</h3>'+body+'<div class="end"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button class="btn go">'+(okLabel||'Save')+'</button></div></form></div>';
+  $('#modal').innerHTML='<div class="ov" onclick="if(event.target===this)closeModal()"><form class="dlg" onsubmit="event.preventDefault();_ok(new FormData(this))"><h3>'+title+'</h3>'+body+'<div class="end"><button type="button" class="btn sm" onclick="closeModal()">Cancel</button><button type="submit" class="btn sm go">'+(okLabel||'Save')+'</button></div></form></div>';
   const f=$('#modal input,#modal select');if(f)f.focus();
 }
 function closeModal(){$('#modal').innerHTML=''}
@@ -349,7 +387,7 @@ function importJSON(ev){
     try{
       const o=JSON.parse(rd.result);
       if(!Array.isArray(o.assets)||!Array.isArray(o.categories))throw 0;
-      S=o;['loans','rules','log'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[]});
+      S=normalizeState(o);['loans','rules','log'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[]});
       applyRules();save();toast('Data imported.');
     }catch(e){toast('That file is not a valid wealth-data.json.')}
   };
@@ -366,7 +404,7 @@ function donut(used,A){
   if(!A)segs='<circle cx="100" cy="100" r="'+R+'" fill="none" stroke="#ece8ff" stroke-width="26"/>';
   used.forEach(c=>{
     const len=c.sum/A*C;
-    segs+='<circle cx="100" cy="100" r="'+R+'" fill="none" stroke="'+c.color+'" stroke-width="26" stroke-dasharray="'+Math.max(len-2,0.5)+' '+C+'" stroke-dashoffset="'+(-off)+'" transform="rotate(-90 100 100)"><title>'+esc(c.name)+': '+fmt(c.sum)+'</title></circle>';
+    segs+='<circle cx="100" cy="100" r="'+R+'" fill="none" stroke="'+c.color+'" stroke-width="26" stroke-dasharray="'+Math.max(len-2,0.5)+' '+C+'" stroke-dashoffset="'+(-off)+'" transform="rotate(-90 100 100)"/>';
     off+=len;
   });
   return '<svg viewBox="0 0 200 200" class="donut" role="img" aria-label="Asset allocation">'+segs+
@@ -381,10 +419,9 @@ function render(){
     return {...c,items,sum:items.reduce((s,a)=>s+ +a.amount,0)};
   });
   const used=cats.filter(c=>c.sum>0).sort((a,b)=>b.sum-a.sum);
-  const legend=used.length?used.map(c=>'<div class="lg"><span class="dot" style="background:'+c.color+'"></span><span><b>'+esc(c.name)+'</b> <span class="mut">'+(c.sum/A*100).toFixed(1)+'%</span></span><b>'+fmt(c.sum)+'</b><div class="bar"><i style="width:'+(c.sum/A*100)+'%;background:'+c.color+'"></i></div></div>').join('')
-    :'<div class="empty">Add your first asset to see how your money is split.</div><div><button class="btn go" onclick="assetForm()">Add asset</button></div>';
+  const legend=used.length?used.map(c=>'<div class="lg"><span class="dot" style="background:'+c.color+'"></span><span><b>'+esc(c.name)+'</b> <span class="mut">'+(c.sum/A*100).toFixed(1)+'%</span></span><span class="mut">'+fmt(c.sum)+'</span></div>').join(''):'<div class="empty">Add your first asset to see how your money is split.</div><div><button class="btn go" onclick="assetForm()">Add asset</button></div>';
   const groups=cats.filter(c=>c.items.length).map(c=>
-    '<div class="grp"><div class="grp-h" style="border-color:'+c.color+'"><span class="dot" style="background:'+c.color+'"></span><b>'+esc(c.name)+'</b><span class="mut">'+(A?(c.sum/A*100).toFixed(1):'0.0')+'%</span><b class="r">'+fmt(c.sum)+'</b></div>'+
+    '<div class="grp"><div class="grp-h" style="border-color:'+c.color+'"><span class="dot" style="background:'+c.color+'"></span><b>'+esc(c.name)+'</b><span class="mut">'+(A?(c.sum/A*100).toFixed(1):'0.0')+'% of total</span></div>'+
     c.items.map(a=>'<div class="item"><div><span class="nm">'+esc(a.name)+'</span><span class="chip">'+esc(a.owner||'Joint')+'</span></div><div class="amt">'+fmt(a.amount)+'</div><div class="acts">'+
       '<button class="btn sm go" onclick="quickAdd(\''+a.id+'\')">Add / withdraw</button>'+
       '<button class="btn sm" onclick="assetForm(\''+a.id+'\')">Edit</button>'+
@@ -393,20 +430,20 @@ function render(){
   $('#main').innerHTML='<div class="wrap">'+
   '<div class="top"><div><h1>Family Wealth Tracker</h1><p>Where our money sits and what we still owe.</p></div>'+
   '<div class="tools"><button class="btn go" onclick="assetForm()">Add asset</button><button class="btn pink" onclick="publish()">Save file for GitHub</button></div></div>'+
-  (dirty?'<div class="banner"><span>You have changes that are not on GitHub yet. Save the file and upload it so your wife sees them.</span><button class="btn sm" style="background:#fff;color:#3b2a00" onclick="publish()">Save file</button></div>':'')+
+  (dirty?'<div class="banner"><span>You have changes that are not on GitHub yet. Save the file and upload it so your wife sees them.</span><button class="btn sm" style="background:#fff;color:#3b2a00" onclick="publish()">Save</button></div>':'')+
   '<div class="hero">'+donut(used,A)+'<div class="legend">'+legend+'</div></div>'+
   '<div class="tiles"><div class="tile t1"><small>Total assets</small><b>'+fmt(A)+'</b><em>'+S.assets.length+' entries in '+used.length+' types</em></div>'+
   '<div class="tile t2"><small>Loans outstanding</small><b>'+fmt(L)+'</b><em>'+S.loans.length+' loan'+(S.loans.length===1?'':'s')+'</em></div>'+
   '<div class="tile t3"><small>Net worth</small><b>'+fmt(NW)+'</b><em>Assets minus loans</em></div></div>'+
   '<div class="sec"><div class="sec-h"><h2>Assets</h2><div class="tools"><button class="btn sm go" onclick="assetForm()">Add asset</button></div></div>'+(groups||'<div class="empty">No assets yet.</div>')+'</div>'+
-  '<div class="sec"><div class="sec-h"><h2>Loans</h2><div class="tools"><button class="btn sm go" onclick="loanForm()">Add loan</button></div></div>'+(S.loans.map(loanCard).join('')||'<div class="empty">No loans. Nice.</div>')+'</div>'+
+  '<div class="sec"><div class="sec-h"><h2>Loans</h2><div class="tools"><button class="btn sm go" onclick="loanForm()">Add loan</button></div></div>'+(S.loans.map(loanCard).join('')||'<div class="empty">No loans yet.</div>')+'</div>'+
   '<div class="sec"><div class="sec-h"><h2>Monthly auto updates</h2><div class="tools"><button class="btn sm pink" onclick="ruleForm(\'loan\')">Reduce a loan</button><button class="btn sm go" onclick="ruleForm(\'asset\')">Increase an asset</button></div></div>'+
   (S.rules.length?loanRules.concat(assetRules).map(ruleRow).join(''):'<div class="empty">Set a loan EMI or a mutual fund SIP and it updates itself every month.</div>')+
   '<div class="mut" style="font-size:13px">Updates are applied when the page is opened, so a missed date is caught up automatically.</div></div>'+
   '<div class="sec"><div class="sec-h"><h2>Investment types</h2><div class="tools"><button class="btn sm go" onclick="catForm()">New type</button></div></div><div class="cats">'+
   S.categories.map(c=>'<span class="cat" style="background:'+c.color+'">'+esc(c.name)+'<button title="Edit" onclick="catForm(\''+c.id+'\')">✎</button><button title="Delete" onclick="delCat(\''+c.id+'\')">×</button></span>').join('')+'</div></div>'+
   (S.log.length?'<div class="sec"><div class="sec-h"><h2>Recent activity</h2></div><div class="log">'+S.log.slice(0,15).map(e=>'<div><b>'+esc(e.on)+'</b> &nbsp;'+esc(e.text)+'</div>').join('')+'</div></div>':'')+
-  '<div class="foot"><label class="btn sm" style="cursor:pointer">Import data<input type="file" accept=".json" hidden onchange="importJSON(event)"></label> <button class="btn sm" onclick="exportJSON()">Export data</button> <button class="btn sm del" onclick="resetLocal()">Discard my local changes</button></div>'+
+  '<div class="foot"><label class="btn sm" style="cursor:pointer">Import data<input type="file" accept=".json" hidden onchange="importJSON(event)"></label> <button class="btn sm" onclick="exportJSON()">Export JSON</button> <button class="btn sm del" onclick="resetLocal()">Reset device</button></div>'+
   '</div>';
 }
 
