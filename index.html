@@ -184,7 +184,9 @@ let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{if(!$(
 
 /* ===== Portfolio tab (unchanged logic) ===== */
 const tots=()=>({ti:D.filter(x=>x.cat!="Debt").reduce((s,x)=>s+x.amount,0),td:D.filter(x=>x.cat=="Debt").reduce((s,x)=>s+x.amount,0)});
-function snap(){if(!ready||!D.length)return;const {ti,td}=tots(),k=mk(new Date()),h=X.H[k]||(X.H[k]={});if(h.v!==ti||h.d!==td){h.v=ti;h.d=td;persistX()}}
+function snap(){if(!ready||!D.length)return;const {ti,td}=tots(),k=mk(new Date()),vk=Object.keys(X.H).filter(a=>X.H[a].v!=null&&a<k).sort();let ch=false;
+ if(vk.length){let p=vk[vk.length-1],pv=X.H[p].v;for(let m=shiftMonth(p,1),i=0;m<k&&i<600;m=shiftMonth(m,1),i++){const h=X.H[m]||(X.H[m]={});if(h.v==null){pv+=invOf(m);h.v=pv;h.est=1;ch=true}else pv=h.v}}
+ const h=X.H[k]||(X.H[k]={});if(h.v!==ti||h.d!==td){h.v=ti;h.d=td;delete h.est;ch=true}if(ch)persistX()}
 function render(){snap();renderPF();renderSP();renderGR()}
 function renderPF(){const inv=D.filter(x=>x.cat!="Debt"),{ti,td}=tots();
  $("ti").textContent=R(ti);$("td").textContent=R(td);$("nw").textContent=R(ti-td);
@@ -291,12 +293,12 @@ function renderGR(){document.querySelectorAll(".chip").forEach(c=>c.classList.to
  const iv=ms.map(invOf).filter(v=>v>0);$("g3").textContent=iv.length?R(iv.reduce((a,b)=>a+b,0)/iv.length):"—";$("g3n").textContent=iv.length?`over ${iv.length} month${iv.length>1?"s":""}`:"No SIP data yet";
  $("g4").textContent=R(invOf(cur));$("g4n").textContent=ml(cur,1);
  let t='<div class="tr th hh"><span>MONTH</span><span>VALUE</span><span>INVESTED</span><span></span></div>';
- t+=keys.slice().reverse().map(k=>`<div class="tr hh"><span>${ml(k)}</span><span>${X.H[k].v!=null?C(X.H[k].v):"—"}</span><span>${C(invOf(k))}</span><span><button class="s" onclick="openH('${k}')">✏️</button> <button class="s" onclick="delH('${k}')">🗑</button></span></div>`).join("");
+ t+=keys.slice().reverse().map(k=>`<div class="tr hh"><span>${ml(k)}</span><span>${X.H[k].v!=null?C(X.H[k].v)+(X.H[k].est?" ~":""):"—"}</span><span>${C(invOf(k))}</span><span><button class="s" onclick="openH('${k}')">✏️</button> <button class="s" onclick="delH('${k}')">🗑</button></span></div>`).join("");
  $("hist").innerHTML=keys.length?t:'<div class="empty">Your first monthly snapshot is saved automatically once you add investments. You can also backfill earlier months.</div>'}
 function openH(k){$("hm").value=k||"";$("hm").disabled=!!k;const h=k?X.H[k]:{};$("hv").value=h.v??"";$("hi").value=h.inv??"";$("hmodal").classList.remove("hide")}
 function saveH(){const m=$("hm").value;if(!/^\d{4}-\d{2}$/.test(m))return alert("Pick a month");
  const v=$("hv").value,i=$("hi").value;if(v===""&&i==="")return alert("Enter value or invested amount");
- const h=X.H[m]||(X.H[m]={});if(v!=="")h.v=parseFloat(v);if(i!=="")h.inv=parseFloat(i);else delete h.inv;
+ const h=X.H[m]||(X.H[m]={});if(v!==""){h.v=parseFloat(v);delete h.est}if(i!=="")h.inv=parseFloat(i);else delete h.inv;
  persistX();$("hmodal").classList.add("hide");render()}
 function delH(k){if(confirm("Delete history for "+ml(k,1)+"?")){delete X.H[k];persistX();render()}}
 if(localStorage.getItem("irale_ok"))start();
