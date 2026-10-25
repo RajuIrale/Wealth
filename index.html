@@ -118,7 +118,7 @@ label{font-size:13px;opacity:.85}.row{display:flex;gap:8px}.err{color:#ff8a8a;mi
 <label>Note (optional)</label><input id="enote" placeholder="e.g. HDFC EMI">
 <label>Amount ₹</label><input id="eamt" type="number" inputmode="decimal">
 <label><input type="checkbox" id="erec"> Repeats every month (EMI, rent, school fee…)</label>
-<p class="note">Editing a repeating expense changes it for all its months.</p>
+<p class="note">Repeats by default. If you change it, the new amount applies from this month onward; earlier months stay as they were.</p>
 <div class="row" style="margin-top:10px"><button class="g" style="flex:1" onclick="saveE()">Save</button><button class="s" onclick="$('emodal').classList.add('hide')">Cancel</button></div></div></div>
 
 <div id="hmodal" class="modal hide"><div class="card"><h3 style="margin-bottom:8px">Monthly history</h3>
@@ -178,7 +178,7 @@ function doLogin(){if(H($("u").value.trim()+":"+$("p").value)==OK){localStorage.
 $("p").addEventListener("keydown",e=>{if(e.key=="Enter")doLogin()});
 function logout(){localStorage.removeItem("irale_ok");location.reload()}
 async function start(){if(!getDB()){const u=prompt("One-time setup: paste your Firebase Realtime Database URL (leave empty for this-device-only)");if(u&&u.trim())localStorage.setItem("irale_db",u.trim())}
- $("login").classList.add("hide");$("app").classList.remove("hide");tab(localStorage.getItem("irale_tab")||"pf");render();await pull();await pullX();autoApply();ready=true;render();setInterval(sync,20000);addEventListener("focus",sync)}
+ $("login").classList.add("hide");$("app").classList.remove("hide");tab(localStorage.getItem("irale_tab")||"pf");render();await pull();await pullX();if(!X.mig){const L=X.E.exp.filter(e=>!e.rec).map(e=>e.m).sort().pop();X.E.exp.forEach(e=>{if(!e.rec&&e.m==L)e.rec=true});X.mig=1;persistX()}autoApply();ready=true;render();setInterval(sync,20000);addEventListener("focus",sync)}
 function tab(t){["pf","sp","gr"].forEach(k=>{$("t-"+k).classList.toggle("hide",k!=t);document.querySelector(`[data-t="${k}"]`).classList.toggle("on",k==t)});localStorage.setItem("irale_tab",t);if(t=="gr")renderGR()}
 let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{if(!$("t-gr").classList.contains("hide"))renderGR()},200)});
 
@@ -238,13 +238,15 @@ function saveS(){const v=parseFloat($("samt").value);if(isNaN(v)||v<0)return ale
 let xid=null;
 function openE(id){xid=id||null;const x=X.E.exp.find(i=>i.id==id)||{};
  $("etype").innerHTML=X.E.types.map(t=>`<option ${x.type==t?"selected":""}>${esc(t)}</option>`).join("")+'<option value="__new">＋ New type…</option>';
- $("emt").textContent=id?"Edit expense":"Add expense";$("enote").value=x.note||"";$("eamt").value=x.amt??"";$("erec").checked=!!x.rec;$("entype").value="";etg();$("emodal").classList.remove("hide")}
+ $("emt").textContent=id?"Edit expense":"Add expense";$("enote").value=x.note||"";$("eamt").value=x.amt??"";$("erec").checked=id?!!x.rec:true;$("entype").value="";etg();$("emodal").classList.remove("hide")}
 const etg=()=>$("entype").classList.toggle("hide",$("etype").value!="__new");
 function saveE(){let t=$("etype").value;
  if(t=="__new"){t=$("entype").value.trim();if(!t)return alert("Enter a type name");const f=X.E.types.find(a=>a.toLowerCase()==t.toLowerCase());if(f)t=f;else X.E.types.push(t)}
  const amt=parseFloat($("eamt").value);if(!(amt>0))return alert("Enter a valid amount");
  const o={type:t,note:$("enote").value.trim(),amt,rec:$("erec").checked},x=X.E.exp.find(i=>i.id==xid);
- if(x){const ch=!!x.rec!==o.rec;Object.assign(x,o);if(ch)x.m=CM;if(!x.rec)delete x.to}
+ if(x){const same=x.type==o.type&&x.note==o.note&&x.amt==o.amt&&!!x.rec==o.rec;
+  if(!same){if(x.rec&&x.m<CM){const to=x.to;x.to=shiftMonth(CM,-1);X.E.exp.push({id:Date.now()+"",m:CM,...o,...(o.rec&&to?{to}:{})})}
+  else{Object.assign(x,o);if(!x.rec)delete x.to}}}
  else X.E.exp.push({id:Date.now()+"",m:CM,...o});
  persistX();$("emodal").classList.add("hide");render()}
 function delE(id){const x=X.E.exp.find(i=>i.id==id);if(!x)return;
