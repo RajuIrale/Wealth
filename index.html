@@ -141,13 +141,19 @@ const mk=d=>iso(d).slice(0,7);
 const shiftMonth=(m,n)=>{const a=m.split("-");return mk(new Date(+a[0],a[1]-1+n,1))};
 const ml=(m,long)=>{const a=m.split("-");return new Date(+a[0],a[1]-1,1).toLocaleString("en-IN",long?{month:"long",year:"numeric"}:{month:"short",year:"2-digit"})};
 const anyModal=()=>document.querySelector(".modal:not(.hide)");
-const DB_DEFAULT="https://rajuswati-86b45-default-rtdb.firebaseio.com/";/* paste your Firebase Realtime Database URL here, e.g. https://xxxx-default-rtdb.firebaseio.com */
+const DB_DEFAULT="https://rajuswati-86b45-default-rtdb.firebaseio.com/";
 const getDB=()=>(DB_DEFAULT||localStorage.getItem("irale_db")||"").replace(/\/$/,"");
+
+/* ===== Firebase Auth (email/password via REST) — needed because database rules require auth ===== */
+const FB_KEY="AIzaSyACq72x18fnFgFMOwLBt_VVNtmk_B50AdM",FB_EMAIL="RajuSwati@gmail.com";let IDT="",IDX=0;
+async function fbSignIn(pw){const r=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key="+FB_KEY,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:FB_EMAIL,password:pw,returnSecureToken:true})});const j=await r.json();if(!r.ok)throw 0;IDT=j.idToken;IDX=Date.now()+(+j.expiresIn-60)*1000;localStorage.setItem("irale_rt",j.refreshToken)}
+async function tok(){if(IDT&&Date.now()<IDX)return IDT;const rt=localStorage.getItem("irale_rt");if(!rt)throw 0;const r=await fetch("https://securetoken.googleapis.com/v1/token?key="+FB_KEY,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"grant_type=refresh_token&refresh_token="+encodeURIComponent(rt)});const j=await r.json();if(!r.ok)throw 0;IDT=j.id_token;IDX=Date.now()+(+j.expires_in-60)*1000;localStorage.setItem("irale_rt",j.refresh_token);return IDT}
+
 let TS=+localStorage.getItem("irale_ts")||0;
 const setSt=t=>$("st").textContent=t;
 const persist=()=>{TS=Date.now();localStorage.setItem(KEY,JSON.stringify(D));localStorage.setItem("irale_ts",TS);push()};
-async function push(){const b=getDB();if(!b)return setSt("💾 Local only");try{const r=await fetch(b+"/irale_family.json",{method:"PUT",body:JSON.stringify({ts:TS,items:D})});if(!r.ok)throw 0;setSt("☁ Synced")}catch{setSt("⚠ Not synced")}}
-async function pull(){const b=getDB();if(!b)return setSt("💾 Local only");try{const r=await fetch(b+"/irale_family.json");if(!r.ok)throw 0;const j=await r.json();
+async function push(){const b=getDB();if(!b)return setSt("💾 Local only");try{const r=await fetch(b+"/irale_family.json?auth="+await tok(),{method:"PUT",body:JSON.stringify({ts:TS,items:D})});if(!r.ok)throw 0;setSt("☁ Synced")}catch{setSt("⚠ Not synced")}}
+async function pull(){const b=getDB();if(!b)return setSt("💾 Local only");try{const r=await fetch(b+"/irale_family.json?auth="+await tok());if(!r.ok)throw 0;const j=await r.json();
  if(!j){if(D.length){TS=TS||Date.now();push()}}
  else if(j.ts>TS){D=j.items||[];TS=j.ts;localStorage.setItem(KEY,JSON.stringify(D));localStorage.setItem("irale_ts",TS);if(!anyModal())render()}
  setSt("☁ Synced")}catch{setSt("⚠ Offline")}}
@@ -161,8 +167,8 @@ let RG=localStorage.getItem("irale_rg");RG=RG===null?12:+RG;
 function ensureX(){X=X||{};X.E=X.E||{};X.E.sal=X.E.sal||{};X.E.exp=(X.E.exp||[]).filter(Boolean);X.E.types=(X.E.types&&X.E.types.length)?X.E.types:DEFT.slice();X.H=X.H||{}}
 ensureX();
 const persistX=()=>{TSX=Date.now();localStorage.setItem(XKEY,JSON.stringify(X));localStorage.setItem("irale_xts",TSX);pushX()};
-async function pushX(){const b=getDB();if(!b)return setSt("💾 Local only");try{const r=await fetch(b+"/irale_extra.json",{method:"PUT",body:JSON.stringify({ts:TSX,x:X})});if(!r.ok)throw 0;setSt("☁ Synced")}catch{setSt("⚠ Not synced")}}
-async function pullX(){const b=getDB();if(!b)return;try{const r=await fetch(b+"/irale_extra.json");if(!r.ok)throw 0;const j=await r.json();
+async function pushX(){const b=getDB();if(!b)return setSt("💾 Local only");try{const r=await fetch(b+"/irale_extra.json?auth="+await tok(),{method:"PUT",body:JSON.stringify({ts:TSX,x:X})});if(!r.ok)throw 0;setSt("☁ Synced")}catch{setSt("⚠ Not synced")}}
+async function pullX(){const b=getDB();if(!b)return;try{const r=await fetch(b+"/irale_extra.json?auth="+await tok());if(!r.ok)throw 0;const j=await r.json();
  if(!j){if(TSX)pushX()}
  else if(j.ts>TSX){X=j.x;ensureX();TSX=j.ts;localStorage.setItem(XKEY,JSON.stringify(X));localStorage.setItem("irale_xts",TSX);if(!anyModal())render()}
  }catch{}}
@@ -174,9 +180,9 @@ function autoApply(){const t=new Date();t.setHours(0,0,0,0);let ch=0;chX=false;
    if(c>t)break;if(c>last){it.amount=it.cat=="Debt"?Math.max(0,it.amount-it.auto.amt):it.amount+it.auto.amt;last=c;it.last=iso(c);ch=1;
     if(it.cat!="Debt"){const k=mk(c),h=X.H[k]||(X.H[k]={});(h.src=h.src||{})[it.id]=it.auto.amt;chX=true}}m++;if(m>11){m=0;y++}}});
  if(ch)persist();if(chX)persistX()}
-function doLogin(){if(H($("u").value.trim()+":"+$("p").value)==OK){localStorage.setItem("irale_ok","1");start()}else $("err").textContent="Wrong username or password"}
+async function doLogin(){if(H($("u").value.trim()+":"+$("p").value)==OK){try{await fbSignIn($("p").value)}catch{}localStorage.setItem("irale_ok","1");start()}else $("err").textContent="Wrong username or password"}
 $("p").addEventListener("keydown",e=>{if(e.key=="Enter")doLogin()});
-function logout(){localStorage.removeItem("irale_ok");location.reload()}
+function logout(){localStorage.removeItem("irale_ok");localStorage.removeItem("irale_rt");location.reload()}
 async function start(){if(!getDB()){const u=prompt("One-time setup: paste your Firebase Realtime Database URL (leave empty for this-device-only)");if(u&&u.trim())localStorage.setItem("irale_db",u.trim())}
  $("login").classList.add("hide");$("app").classList.remove("hide");tab(localStorage.getItem("irale_tab")||"pf");render();await pull();await pullX();if(!X.mig){const L=X.E.exp.filter(e=>!e.rec).map(e=>e.m).sort().pop();X.E.exp.forEach(e=>{if(!e.rec&&e.m==L)e.rec=true});X.mig=1;persistX()}autoApply();ready=true;render();setInterval(sync,20000);addEventListener("focus",sync)}
 function tab(t){["pf","sp","gr"].forEach(k=>{$("t-"+k).classList.toggle("hide",k!=t);document.querySelector(`[data-t="${k}"]`).classList.toggle("on",k==t)});localStorage.setItem("irale_tab",t);if(t=="gr")renderGR()}
@@ -301,5 +307,6 @@ function saveH(){const m=$("hm").value;if(!/^\d{4}-\d{2}$/.test(m))return alert(
  const h=X.H[m]||(X.H[m]={});if(v!==""){h.v=parseFloat(v);delete h.est}if(i!=="")h.inv=parseFloat(i);else delete h.inv;
  persistX();$("hmodal").classList.add("hide");render()}
 function delH(k){if(confirm("Delete history for "+ml(k,1)+"?")){delete X.H[k];persistX();render()}}
-if(localStorage.getItem("irale_ok"))start();
+/* Auto-open only if this device already has a Firebase token; older sessions without one go to the login screen once. */
+if(localStorage.getItem("irale_ok")&&localStorage.getItem("irale_rt"))start();
 </script></body></html>
